@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -25,8 +24,6 @@ import (
 func main() {
 	args := os.Args
 	if len(args) == 1 {
-		fmt.Println(1111)
 		return
 	}
-
 }
