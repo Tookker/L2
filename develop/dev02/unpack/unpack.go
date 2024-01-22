@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	incorectStrErr = errors.New("Incorrect string")
+	errIncorectStr = errors.New("Incorrect string")
 )
 
 type simbolType uint
@@ -26,13 +26,16 @@ type combination struct {
 
 const (
 	otherS                   combType = 0 //'a'
-	otherSAndDigit           combType = 1 //'a1'
-	otherSAndEscapeAndEscape combType = 2 //'a\\'
-	otherSAndEscapeAndDigit  combType = 3 //'a\1'
-	escapeAndEscape          combType = 4 //'\\'
-	escapeAndDigit           combType = 5 //'\1'
+	digitS                   combType = 1 //'1'
+	otherSAndDigit           combType = 2 //'a1'
+	otherSAndEscapeAndEscape combType = 3 //'a\\'
+	otherSAndEscapeAndDigit  combType = 4 //'a\1'
+	escapeAndEscape          combType = 5 //'\\'
+	escapeAndDigit           combType = 6 //'\1'
+	digitAndDigit            combType = 6 //'\\1\\5'
 )
 
+// String - расскрывает escape последовательность
 func String(str string) (string, error) {
 	if len(str) == 1 {
 		return str, nil
@@ -53,48 +56,61 @@ func getCombinations(str string) ([]combination, error) {
 
 	err := checkFirstSimbol(arr[0])
 	if err != nil {
-		return nil, incorectStrErr
+		return nil, errIncorectStr
 	}
 
 	for i := 0; i < len(arr); i++ {
 		switch getSimbolType(arr[i]) {
 		case escape:
 			if len(arr) <= i+1 {
-				return nil, incorectStrErr
+				return nil, errIncorectStr
 			}
 
 			switch getSimbolType(arr[i+1]) {
 			case escape:
-				return append(ret, combination{comb: escapeAndEscape, arr: make([]rune, arr[i])}), nil
+				return append(ret, combination{comb: escapeAndEscape, arr: []rune{arr[i]}}), nil
 			case digit:
-				return append(ret, combination{comb: escapeAndDigit, arr: make([]rune, arr[i+1])}), nil
+				return append(ret, combination{comb: escapeAndDigit, arr: []rune{arr[i+1]}}), nil
 			default:
-				return nil, incorectStrErr
+				return nil, errIncorectStr
 			}
 		case other:
 			if len(arr) <= i+1 {
-				return append(ret, combination{comb: otherS, arr: make([]rune, arr[i])}), nil
+				return append(ret, combination{comb: otherS, arr: []rune{arr[i]}}), nil
 			}
 			switch getSimbolType(arr[i+1]) {
 			case other:
-				ret = append(ret, combination{comb: otherS, arr: make([]rune, arr[i])})
+				ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
 			case digit:
 				ret = append(ret, combination{comb: otherSAndDigit, arr: []rune{arr[i], arr[i+1]}})
+				i++
 			case escape:
 				if len(arr) <= i+2 {
-					return nil, incorectStrErr
+					return nil, errIncorectStr
 				}
 				switch getSimbolType(arr[i+2]) {
 				case digit:
-					ret = append(ret, combination{comb: otherSAndEscapeAndDigit, arr: []rune{arr[i], arr[i+2]}})
+					if len(arr) <= i+4 {
+						return nil, errIncorectStr
+					}
+					switch getSimbolType(arr[i+4]) {
+					case escape:
+
+						ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
+						ret = append(ret, combination{comb: escapeAndDigit, arr: []rune{arr[i+2], arr[i+4]}})
+					default:
+						ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
+						ret = append(ret, combination{comb: digitS, arr: []rune{arr[i+2]}})
+						i = i + 2
+					}
 				case escape:
 					ret = append(ret, combination{comb: otherSAndEscapeAndEscape, arr: []rune{arr[i]}})
 				default:
-					return nil, incorectStrErr
+					return nil, errIncorectStr
 				}
 			}
 		default:
-			return nil, incorectStrErr
+			return nil, errIncorectStr
 		}
 	}
 
@@ -106,11 +122,8 @@ func makeString(arr []combination) string {
 
 	for i := 0; i < len(arr); i++ {
 		switch arr[i].comb {
-		case otherSAndEscapeAndEscape:
-		case escapeAndEscape:
-		case otherS:
-		case escapeAndDigit:
-			resRune = append(resRune, arr[i].arr...)
+		case digitAndDigit:
+			fallthrough
 		case otherSAndDigit:
 			val, _ := strconv.Atoi(string(arr[i].arr[1]))
 			for j := 0; j < val; j++ {
@@ -118,6 +131,8 @@ func makeString(arr []combination) string {
 			}
 		case otherSAndEscapeAndDigit:
 			resRune = append(resRune, arr[i].arr[1])
+		default:
+			resRune = append(resRune, arr[i].arr...)
 		}
 	}
 
@@ -128,7 +143,7 @@ func makeString(arr []combination) string {
 func checkFirstSimbol(r rune) error {
 	res := getSimbolType(r)
 	if res == digit {
-		return incorectStrErr
+		return errIncorectStr
 	}
 
 	return nil

@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
+
+	"L2/develop/dev02/unpack"
 )
 
 /*
@@ -26,4 +29,12 @@ func main() {
 	if len(args) == 1 {
 		return
 	}
+
+	res, err := unpack.String(args[1])
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println("Input string:", args[1], "Output string:", res)
 }
