@@ -1,8 +1,9 @@
 package unpack_test
 
 import (
-	"L2/develop/dev02/unpack"
 	"testing"
+
+	"L2/develop/dev02/unpack"
 )
 
 func TestString(t *testing.T) {
@@ -21,33 +22,33 @@ func TestString(t *testing.T) {
 		want    want
 		wantErr bool
 	}{
-		// {
-		// 	name: "String with digit and letters",
-		// 	args: args{"a4bc2d5e"},
-		// 	want: want{
-		// 		res: "aaaabccddddde",
-		// 		err: nil,
-		// 	},
-		// 	wantErr: false,
-		// },
-		// {
-		// 	name: "String with letters",
-		// 	args: args{"abcd"},
-		// 	want: want{
-		// 		res: "abcd",
-		// 		err: nil,
-		// 	},
-		// 	wantErr: false,
-		// },
-		// {
-		// 	name: "String with digit",
-		// 	args: args{"45"},
-		// 	want: want{
-		// 		res: "",
-		// 		err: errors.New("Incorrect string"),
-		// 	},
-		// 	wantErr: true,
-		// },
+		{
+			name: "String with digit and letters",
+			args: args{"a4bc2d5e"},
+			want: want{
+				res: "aaaabccddddde",
+				err: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "String with letters",
+			args: args{"abcd"},
+			want: want{
+				res: "abcd",
+				err: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "String with digit",
+			args: args{"45"},
+			want: want{
+				res: "",
+				err: unpack.ErrIncorectStr,
+			},
+			wantErr: true,
+		},
 		{
 			name: "String with escape",
 			args: args{"qwe\\4\\5"},
@@ -92,6 +93,16 @@ func TestString(t *testing.T) {
 				err: nil,
 			},
 			wantErr: false,
+		},
+
+		{
+			name: "String with escape, digit, letters #5",
+			args: args{"\\53qwe2\\"},
+			want: want{
+				res: "",
+				err: unpack.ErrIncorectStr,
+			},
+			wantErr: true,
 		},
 	}
 

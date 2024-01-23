@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	errIncorectStr = errors.New("Incorrect string")
+	// ErrIncorectStr Ошибка входящей строки
+	ErrIncorectStr = errors.New("Incorrect string")
 )
 
 type simbolType uint
@@ -16,23 +17,6 @@ const (
 	digit  simbolType = 0
 	escape simbolType = 1
 	other  simbolType = 2
-)
-
-type combType uint
-type combination struct {
-	comb combType
-	arr  []rune
-}
-
-const (
-	otherS                   combType = 0 //'a'
-	digitS                   combType = 1 //'1'
-	otherSAndDigit           combType = 2 //'a1'
-	otherSAndEscapeAndEscape combType = 3 //'a\\'
-	otherSAndEscapeAndDigit  combType = 4 //'a\1'
-	escapeAndEscape          combType = 5 //'\\'
-	escapeAndDigit           combType = 6 //'\1'
-	digitAndDigit            combType = 6 //'\\1\\5'
 )
 
 // String - расскрывает escape последовательность
@@ -46,104 +30,149 @@ func String(str string) (string, error) {
 		return "", err
 	}
 
-	return makeString(combArr), nil
+	return combArr, nil
 }
 
 // getCombinations - получение возможных комбинаций распаковки строк
-func getCombinations(str string) ([]combination, error) {
+func getCombinations(str string) (string, error) {
 	arr := []rune(str)
-	ret := make([]combination, 0, len(arr)+10)
+	res := make([]rune, 0, len(str)+10)
 
 	err := checkFirstSimbol(arr[0])
 	if err != nil {
-		return nil, errIncorectStr
+		return "", ErrIncorectStr
 	}
 
 	for i := 0; i < len(arr); i++ {
 		switch getSimbolType(arr[i]) {
 		case escape:
-			if len(arr) <= i+1 {
-				return nil, errIncorectStr
+			if i+1 >= len(arr) {
+				return "", ErrIncorectStr
 			}
 
-			switch getSimbolType(arr[i+1]) {
-			case escape:
-				return append(ret, combination{comb: escapeAndEscape, arr: []rune{arr[i]}}), nil
-			case digit:
-				return append(ret, combination{comb: escapeAndDigit, arr: []rune{arr[i+1]}}), nil
-			default:
-				return nil, errIncorectStr
+			if getSimbolType(arr[i+1]) == other {
+				return "", ErrIncorectStr
 			}
+
+			if getSimbolType(arr[i+1]) == digit {
+				if i+2 < len(arr) {
+					if getSimbolType(arr[i+2]) == digit {
+						iter, resR, err := makeEscapeCombination(arr[i+1 : i+3])
+						if err != nil {
+							return "", err
+						}
+						i += iter
+						res = append(res, resR...)
+						continue
+					}
+				}
+
+				iter, resR, err := makeEscapeCombination(arr[i+1 : i+2])
+				if err != nil {
+					return "", err
+				}
+
+				i += iter
+				res = append(res, resR...)
+				continue
+			}
+
+			if i+2 >= len(arr) {
+				return "", ErrIncorectStr
+			}
+
+			if getSimbolType(arr[i+2]) == other {
+				iter, resR, err := makeEscapeCombination(arr[i : i+1])
+				if err != nil {
+					return "", err
+				}
+				i += iter + 1
+				res = append(res, resR...)
+				continue
+			}
+
+			if getSimbolType(arr[i+2]) == digit {
+				iter, resR, err := makeEscapeCombination(arr[i+1 : i+3])
+				if err != nil {
+					return "", err
+				}
+				i += iter
+				res = append(res, resR...)
+				continue
+			}
+
+			return "", ErrIncorectStr
+
 		case other:
-			if len(arr) <= i+1 {
-				return append(ret, combination{comb: otherS, arr: []rune{arr[i]}}), nil
-			}
-			switch getSimbolType(arr[i+1]) {
-			case other:
-				ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
-			case digit:
-				ret = append(ret, combination{comb: otherSAndDigit, arr: []rune{arr[i], arr[i+1]}})
-				i++
-			case escape:
-				if len(arr) <= i+2 {
-					return nil, errIncorectStr
+			if i+1 >= len(arr) {
+				_, resR, err := makeOtherCombination(arr[i : i+1])
+				if err != nil {
+					return "", err
 				}
-				switch getSimbolType(arr[i+2]) {
-				case digit:
-					if len(arr) <= i+4 {
-						return nil, errIncorectStr
-					}
-					switch getSimbolType(arr[i+4]) {
-					case escape:
-
-						ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
-						ret = append(ret, combination{comb: escapeAndDigit, arr: []rune{arr[i+2], arr[i+4]}})
-					default:
-						ret = append(ret, combination{comb: otherS, arr: []rune{arr[i]}})
-						ret = append(ret, combination{comb: digitS, arr: []rune{arr[i+2]}})
-						i = i + 2
-					}
-				case escape:
-					ret = append(ret, combination{comb: otherSAndEscapeAndEscape, arr: []rune{arr[i]}})
-				default:
-					return nil, errIncorectStr
+				res = append(res, resR...)
+			} else {
+				iter, resR, err := makeOtherCombination(arr[i : i+2])
+				if err != nil {
+					return "", err
 				}
+				i += iter
+				res = append(res, resR...)
 			}
-		default:
-			return nil, errIncorectStr
 		}
 	}
 
-	return ret, nil
+	return string(res), nil
 }
 
-func makeString(arr []combination) string {
-	resRune := make([]rune, 0, len(arr)+10)
+// makeOtherCombination - создать комбинацию из букв
+func makeOtherCombination(arr []rune) (int, []rune, error) {
+	const maxSize = 2
+	const minSize = 1
 
-	for i := 0; i < len(arr); i++ {
-		switch arr[i].comb {
-		case digitAndDigit:
-			fallthrough
-		case otherSAndDigit:
-			val, _ := strconv.Atoi(string(arr[i].arr[1]))
-			for j := 0; j < val; j++ {
-				resRune = append(resRune, arr[i].arr[0])
+	switch len(arr) {
+	case maxSize:
+		if getSimbolType(arr[1]) == digit {
+			size, _ := strconv.Atoi(string(arr[1]))
+			res := make([]rune, 0, size)
+			for i := 0; i < size; i++ {
+				res = append(res, arr[0])
 			}
-		case otherSAndEscapeAndDigit:
-			resRune = append(resRune, arr[i].arr[1])
-		default:
-			resRune = append(resRune, arr[i].arr...)
+			return 1, res, nil
 		}
+
+		return 0, []rune{arr[0]}, nil
+	case minSize:
+		return 0, []rune{arr[0]}, nil
 	}
 
-	return string(resRune)
+	return 0, nil, ErrIncorectStr
+}
+
+// создать комбинацию из / - escape
+func makeEscapeCombination(arr []rune) (int, []rune, error) {
+	res := make([]rune, 0, len(arr))
+
+	switch len(arr) {
+	case 1:
+		res = append(res, arr...)
+		return 1, res, nil
+
+	case 2:
+		size, _ := strconv.Atoi(string(arr[1]))
+		for i := 0; i < size; i++ {
+			res = append(res, arr[0])
+		}
+		return 2, res, nil
+	}
+
+	return 0, nil, ErrIncorectStr
 }
 
 // checkFirstIndx - проверка первого элемента на коректность (не должно быть числа)
 func checkFirstSimbol(r rune) error {
 	res := getSimbolType(r)
 	if res == digit {
-		return errIncorectStr
+		return ErrIncorectStr
 	}
 
 	return nil
