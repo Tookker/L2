@@ -251,3 +251,47 @@ func TestGetRes(t *testing.T) {
 		})
 	}
 }
+
+func TestCut(t *testing.T) {
+	type args struct {
+		cut MyCut
+	}
+
+	type want struct {
+		res string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "cut",
+			args: args{cut: MyCut{skipStr: 2, str: "kek mek cheburek\nkek lol arbidol", d: "e"}},
+			want: want{res: "kk chburk\nkk arbidol\n"},
+		},
+
+		{
+			name: "cut",
+			args: args{cut: MyCut{showStr: []uint{1, 2}, str: "kek mek cheburek\nkek lol arbidol", d: "e"}},
+			want: want{res: "kk mk\nkk lol\n"},
+		},
+
+		{
+			name: "cut",
+			args: args{cut: MyCut{skipStr: 2, str: "kek mek cheburek\nkek lol arbidol", d: "e", s: true}},
+			want: want{res: "kk chburk\nkk\n"},
+		},
+	}
+
+	for index, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.args.cut.Cut()
+			if res != tt.want.res {
+				t.Errorf("Test #%v, res = %v, want = %v", index+1, res, tt.want.res)
+				return
+			}
+		})
+	}
+}

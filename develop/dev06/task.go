@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"L2/develop/dev06/argsparser"
+	"L2/develop/dev06/cut"
 )
 
 /*
@@ -26,5 +27,11 @@ func main() {
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
 
-	fmt.Println([]rune(input.Text()))
+	cut, err := cut.NewCut(args, input.Text())
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println(cut.Cut())
 }
